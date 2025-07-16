@@ -17,7 +17,7 @@ import 'dart:typed_data';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:string_similarity/string_similarity.dart';
-
+import 'package:permission_handler/permission_handler.dart';
 
 
 
@@ -55,6 +55,29 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
 
   }
 
+  Future<void> _requestMicPermission() async {
+    var micStatus = await Permission.microphone.status;
+    var speechStatus = await Permission.speech.status;
+
+    if (micStatus.isGranted && speechStatus.isGranted) {
+      print('✅ Permissions already granted');
+      _startListening(); // ✅ Proceed directly
+    } else {
+      final micResult = await Permission.microphone.request();
+      final speechResult = await Permission.speech.request();
+
+      if (micResult.isGranted && speechResult.isGranted) {
+        print('✅ Permissions granted after request');
+        _startListening();
+      } else {
+        print('🚫 Permissions denied');
+        openAppSettings();
+      }
+    }
+  }
+
+
+
   void _startListening() async {
     if (_isListening) {
       await _speech.stop();
@@ -83,56 +106,99 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
       print("🎤 Listening...");
 
       _speech.listen(
-        listenMode: stt.ListenMode.dictation,
-        pauseFor: const Duration(seconds: 3),
-        listenFor: const Duration(seconds: 10),
-        onResult: (result) async {
-          if (result.finalResult) {
-            final spokenRaw = result.recognizedWords.trim();
-            final normalizedSpoken = _normalize(spokenRaw);
-            print("🎤 Spoken raw: '$spokenRaw'");
-            print("🔎 Normalized spoken: '$normalizedSpoken'");
+          listenMode: stt.ListenMode.dictation,
+          pauseFor: const Duration(seconds: 3),
+          listenFor: const Duration(seconds: 10),
+          onResult: (result) async {
+            if (result.finalResult) {
+              final spokenRaw = result.recognizedWords.trim();
+              final normalizedSpoken = _normalize(spokenRaw);
+              print("🎤 Spoken raw: '$spokenRaw'");
+              print("🔎 Normalized spoken: '$normalizedSpoken'");
 
-            double bestMatchScore = 0;
-            int? bestMatchIndex;
-
-            for (int i = 0; i < categories.length; i++) {
-              final normalizedCategory = _normalize(categories[i]);
-              print("➡️ Checking against: '$normalizedCategory'");
-
-              double score = normalizedSpoken.similarityTo(normalizedCategory);
-
-              if (score > bestMatchScore) {
-                bestMatchScore = score;
-                bestMatchIndex = i;
-              }
-            }
-
-            print("✅ Best match index: $bestMatchIndex with score $bestMatchScore");
-
-            if (bestMatchScore > 0.6 && bestMatchIndex != null) {
-              final categoryName = categories[bestMatchIndex];
-              if (bestMatchIndex != null) {
-                setState(() => selectedCategoryIndex = bestMatchIndex!);
+              /// 1. Greeting - user says "hi kira"
+              if (normalizedSpoken.contains("hi kira")) {
+                await _flutterTts.speak("Hey ${widget.username}! How are you feeling today?");
               }
 
-              await _flutterTts.speak("Showing the $categoryName near by you");
-
-              if (_liveLocation != null) {
-                await _fetchNearbySpots(
-                  _liveLocation!.latitude,
-                  _liveLocation!.longitude,
+              /// 2. Detect mood "sad"
+              else if (normalizedSpoken.contains("sad")) {
+                await _flutterTts.speak(
+                  "I'm sorry to hear that. How about visiting Wild Garden Cafe nearby? "
+                      "It's a great spot to unwind and feel better. Just ask if you want directions.",
                 );
               }
-            } else {
-              print("❌ No matching category found");
-              await _flutterTts.speak("Sorry, I couldn't find any category like that.");
+
+              /// 3. Detect mood "happy"
+              else if (normalizedSpoken.contains("happy")) {
+                selectedCategoryIndex = categories.indexOf("Funny Tail");
+
+                if (_liveLocation != null) {
+                  await _fetchNearbySpots(_liveLocation!.latitude, _liveLocation!.longitude);
+                }
+
+                await _flutterTts.speak(
+                  "That's wonderful to hear! I've found some fun 'Funny Tail' spots close to you. "
+                      "If you want me to guide you, just say 'show me direction'.",
+                );
+              }
+
+              /// 4. User wants directions
+              else if (normalizedSpoken.contains("show me a direction")) {
+                await _flutterTts.speak("Got it! Let me show you the way.");
+
+                // Placeholder destination
+                LatLng wildGardenCafe = LatLng(13.057002, 80.259509); // Wild Garden Cafe
+
+                if (_liveLocation != null) {
+                  _drawStraightLine(_liveLocation!, wildGardenCafe);
+                  setState(() {
+                    _selectedTitle = "Wild Garden Cafe";
+                    _selectedDescription = "A peaceful place to relax and enjoy.";
+                    _selectedViews = 125;
+                    _selectedCoordinates = wildGardenCafe;
+                  });
+                }
+              }
+
+              /// 5. Try to match any other category mentioned
+              else {
+                double bestMatchScore = 0;
+                int? bestMatchIndex;
+
+                for (int i = 0; i < categories.length; i++) {
+                  final normalizedCategory = _normalize(categories[i]);
+                  double score = normalizedSpoken.similarityTo(normalizedCategory);
+
+                  if (score > bestMatchScore) {
+                    bestMatchScore = score;
+                    bestMatchIndex = i;
+                  }
+                }
+
+                if (bestMatchScore > 0.6 && bestMatchIndex != null) {
+                  final categoryName = categories[bestMatchIndex];
+                  setState(() => selectedCategoryIndex = bestMatchIndex!);
+
+                  await _flutterTts.speak("Alright! Here are some spots for $categoryName near you.");
+
+                  if (_liveLocation != null) {
+                    await _fetchNearbySpots(
+                      _liveLocation!.latitude,
+                      _liveLocation!.longitude,
+                    );
+                  }
+                } else {
+                  await _flutterTts.speak("Hmm, I couldn't quite find what you're looking for. Could you please try saying it differently?");
+                }
+              }
+
+              await _speech.stop();
+              setState(() => _isListening = false);
             }
 
-            await _speech.stop();
-            setState(() => _isListening = false);
           }
-        },
+
       );
     } else {
       print("❌ Speech recognition not available");
@@ -248,7 +314,7 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
   }
 
   Future<void> _loadProfileMarkerIcon() async {
-    final url = Uri.parse("http://192.168.29.68:4000/profilepicreturn"); // Update if needed
+    final url = Uri.parse("http://172.20.10.5:4000/profilepicreturn"); // Update if needed
 
     try {
       final response = await http.post(
@@ -311,7 +377,7 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
 
 
   Future<void> _fetchSearchedSpots(String searchQuery) async {
-    final url = Uri.parse("http:// 192.168.29.68:4000/search-spots");
+    final url = Uri.parse("http:// 172.20.10.5:4000/search-spots");
     try {
       final response = await http.post(
         url,
@@ -366,7 +432,7 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
     final String selectedCategory = categories[selectedCategoryIndex];
     final String categoryQuery = Uri.encodeComponent(selectedCategory);
 
-    final url = Uri.parse("http://192.168.29.68:4000/nearby?lat=$lat&lng=$lon&SearchQuery=$categoryQuery");
+    final url = Uri.parse("http://172.20.10.5:4000/nearby?lat=$lat&lng=$lon&SearchQuery=$categoryQuery");
 
     try {
       final response = await http.get(url);
@@ -378,7 +444,7 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
         final String imagePath = categoryToPinImage[selectedCategory] ?? 'assets/images/pin_1.png';
 
         final BitmapDescriptor customIcon = await BitmapDescriptor.fromAssetImage(
-          const ImageConfiguration(size: Size(60, 60)),
+          const ImageConfiguration(size: Size(30, 30)),
           imagePath,
         );
 
@@ -397,7 +463,7 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
                 final lonStr = lng.toString();
 
                 final introUrl = Uri.parse(
-                    "http://192.168.29.68:4000/spotintro?username=$username&lat=$latStr&lon=$lonStr"
+                    "http://172.20.10.5:4000/spotintro?username=$username&lat=$latStr&lon=$lonStr"
                 );
 
                 final introResponse = await http.get(introUrl);
@@ -516,7 +582,7 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
 
   Future<Set<Marker>> _buildMarkers() async {
     final BitmapDescriptor customIcon = await BitmapDescriptor.fromAssetImage(
-      const ImageConfiguration(size: Size(60, 60)),
+      const ImageConfiguration(size: Size(30, 30)),
       'assets/images/pin_1.png',
     );
 
@@ -591,8 +657,8 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
               right: 20,
               child: FloatingActionButton(
                 backgroundColor: Colors.black87,
-                onPressed: _startListening,
-                child: Icon(
+              onPressed: _startListening,
+              child: Icon(
                   _isListening ? Icons.mic_none : Icons.mic,
                   color: Colors.white,
                 ),
