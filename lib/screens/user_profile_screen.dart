@@ -1,5 +1,5 @@
 // ✅ FULLY UPDATED CODE with Dropdown Glass Logout Popup
-
+import '../widgets/badge_popup.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../components/app_bar.dart';
@@ -11,6 +11,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:sample_proj/screens/upload_screen.dart';
 import '../widgets/Postcard.dart';
+import 'package:sample_proj/widgets/leaderboard_popup.dart';
+import 'package:sample_proj/widgets/street_streaker.dart';
 
 
 class UserProfileScreen extends StatefulWidget {
@@ -29,12 +31,66 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   List<Map<String, dynamic>> uploadedSpots = [];
   bool isLoading = true;
   bool _showLogoutPopup = false;
+  bool _showBadgePopup = false;
+  bool _showStreakerPopup = false;
+  bool _hasShownStreaker = false;
+
+
 
   @override
   void initState() {
     super.initState();
     fetchUserProfile(widget.username);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        barrierColor: Colors.transparent,
+        builder: (_) => StreetStreakerPopup(
+          onClose: () {
+            Navigator.of(context).pop();
+          },
+        ),
+      );
+    });
   }
+
+  Future<void> fetchLeaderboardAndShow() async {
+    final url = Uri.parse("http://192.168.29.17:4000/area-leaderboard");
+    try {
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "lat": 13.0731, // 🧭 Replace with dynamic lat
+          "lon": 80.2609, // 🧭 Replace with dynamic lon
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final String areaName = data['area'];
+        final List<dynamic> leaderboard = data['leaderboard'];
+
+        // Show popup with data
+        showDialog(
+          context: context,
+          barrierDismissible: true,
+          barrierColor: Colors.transparent,
+          builder: (_) => DynamicLeaderboardPopup(
+            areaName: areaName,
+            leaderboardData: leaderboard,
+            onClose: () => Navigator.of(context).pop(),
+          ),
+        );
+      } else {
+        print("❌ Failed to fetch leaderboard");
+      }
+    } catch (e) {
+      print("⚠️ Error: $e");
+    }
+  }
+
 
   Future<void> fetchUserProfile(String username) async {
     setState(() {
@@ -42,7 +98,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       uploadedSpots.clear(); // ✅ clear old posts
     });
 
-    final url = Uri.parse("http://192.168.29.68:4000/return-profile");
+    final url = Uri.parse("http://192.168.29.17:4000/return-profile");
 
     try {
       final response = await http.post(
@@ -62,6 +118,27 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           profileImageUrl = data['profile_image'];
           isLoading = false;
         });
+        // 🎯 Automatically show StreetStreakerPopup if user posts >= 7 and not shown already
+        // 🎯 Automatically show StreetStreakerPopup if user posts >= 7 and not shown already
+        if (postCount >= 7 && !_hasShownStreaker) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              barrierColor: Colors.transparent,
+              builder: (_) => StreetStreakerPopup(
+                onClose: () {
+                  Navigator.of(context).pop(); // Close the popup
+                },
+              ),
+            );
+          });
+
+          setState(() {
+            _hasShownStreaker = true; // So it only shows once
+          });
+        }
+
       } else {
         print("❌ Failed: \${response.statusCode}");
       }
@@ -73,7 +150,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   int _selectedIndex = 2;
 
   Future<void> _deletePost(int id) async {
-    final url = Uri.parse("http://192.168.29.68:4000/delete-post?id=$id");
+    final url = Uri.parse("http://192.168.29.17:4000/delete-post?id=$id");
 
     try {
       final response = await http.delete(url); // 👈 Use DELETE
@@ -94,12 +171,31 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_showBadgePopup) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() => _showBadgePopup = false);
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          barrierColor: Colors.transparent, // keep background transparent
+          builder: (_) => BadgePopup(
+            score: badgeScore,
+            onClose: () => Navigator.of(context).pop(),
+          ),
+        );
+      });
+    }
+
+
     return GestureDetector(
       onTap: () => setState(() => _showLogoutPopup = false),
       child: Scaffold(
         backgroundColor: const Color(0xFFF8E8EE),
         body: Stack(
           children: [
+            // ✅ Leaderboard Popup overlay
+
+
             SingleChildScrollView(
               padding: const EdgeInsets.only(bottom: 80),
               child: Column(
@@ -187,7 +283,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   ),
 
                   const SizedBox(height: 20),
-                  PostPointsRow(postCount: postCount, badgeScore: badgeScore),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _showBadgePopup = true;
+                      });
+                    },
+                    child: PostPointsRow(postCount: postCount, badgeScore: badgeScore),
+                  ),
+
+
                   const SizedBox(height: 20),
                   if (!isLoading)
                     ...uploadedSpots.map((spot) => PostCard(
@@ -243,6 +348,43 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   ),
                 ),
               ),
+            // 🔘 Floating Leaderboard Icon Button
+            Positioned(
+              bottom: 10,
+              right: 20,
+              child: GestureDetector(
+                onTap: () {
+                  print("🏆 Leaderboard icon tapped");
+                  fetchLeaderboardAndShow();
+
+                },
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(50),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.8),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white.withOpacity(0.6)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 6,
+                            offset: Offset(2, 3),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.emoji_events, color: Colors.white, size: 30),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+
           ],
         ),
         bottomNavigationBar: CustomBottomNav(

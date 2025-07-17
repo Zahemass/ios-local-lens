@@ -47,7 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> loginUser() async {
     setState(() => _isLoading = true);
 
-    final url = Uri.parse('http://192.168.29.68:4000/login');
+    final url = Uri.parse('http://192.168.29.17:4000/login');
     final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
 

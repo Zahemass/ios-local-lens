@@ -70,7 +70,7 @@ class _PlayPostScreenState extends State<PlayPostScreen> {
 
   Future<void> fetchSummary() async {
     final apiUrl = Uri.parse(
-        'http://192.168.29.68:4000/returnsummary?username=${widget.username}&lat=${widget.latitude}&lon=${widget.longitude}');
+        'http://192.168.29.17:4000/returnsummary?username=${widget.username}&lat=${widget.latitude}&lon=${widget.longitude}');
 
     try {
       final response = await http.get(apiUrl);
@@ -93,7 +93,7 @@ class _PlayPostScreenState extends State<PlayPostScreen> {
 
   Future<void> fetchSpotData() async {
     final apiUrl = Uri.parse(
-        'http://192.168.29.68:4000/fullspot?username=${widget.username}&lat=${widget.latitude}&lon=${widget.longitude}');
+        'http://192.168.29.17:4000/fullspot?username=${widget.username}&lat=${widget.latitude}&lon=${widget.longitude}');
 
     try {
       final response = await http.get(apiUrl);
@@ -118,7 +118,7 @@ class _PlayPostScreenState extends State<PlayPostScreen> {
 
   Future<void> fetchTranslationAndSpeak() async {
     final apiUrl = Uri.parse(
-        'http://192.168.29.68:4000/translation?username=${widget.username}&lat=${widget.latitude}&lon=${widget.longitude}&lang=${selectedLanguage.toLowerCase()}'
+        'http://192.168.29.17:4000/translation?username=${widget.username}&lat=${widget.latitude}&lon=${widget.longitude}&lang=${selectedLanguage.toLowerCase()}'
     );
 
     try {

@@ -195,7 +195,7 @@ class _UploadScreenState extends State<UploadScreen> {
   Future<void> _generateTitleFromAudio(File audioFile) async {
     setState(() => _isGeneratingTitle = true);
 
-    final uri = Uri.parse('http://192.168.29.68:4000/audiotitle');
+    final uri = Uri.parse('http://192.168.29.17:4000/audiotitle');
     final request = http.MultipartRequest('POST', uri)
       ..files.add(await http.MultipartFile.fromPath('audio', audioFile.path));
 
@@ -293,7 +293,7 @@ class _UploadScreenState extends State<UploadScreen> {
     setState(() => _isUploadingSpot = true);
 
     try {
-      final uri = Uri.parse('http://192.168.29.68:4000/spots');
+      final uri = Uri.parse('http://192.168.29.17:4000/spots');
       final request = http.MultipartRequest('POST', uri);
 
       final selectedCategory = categories[selectedCategoryIndex];

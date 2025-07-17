@@ -18,6 +18,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:string_similarity/string_similarity.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:sample_proj/screens/journey_screen.dart';
 
 
 
@@ -314,7 +315,7 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
   }
 
   Future<void> _loadProfileMarkerIcon() async {
-    final url = Uri.parse("http://172.20.10.5:4000/profilepicreturn"); // Update if needed
+    final url = Uri.parse("http://192.168.29.17:4000/profilepicreturn"); // Update if needed
 
     try {
       final response = await http.post(
@@ -377,7 +378,7 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
 
 
   Future<void> _fetchSearchedSpots(String searchQuery) async {
-    final url = Uri.parse("http:// 172.20.10.5:4000/search-spots");
+    final url = Uri.parse("http:// 192.168.29.17:4000/search-spots");
     try {
       final response = await http.post(
         url,
@@ -432,7 +433,7 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
     final String selectedCategory = categories[selectedCategoryIndex];
     final String categoryQuery = Uri.encodeComponent(selectedCategory);
 
-    final url = Uri.parse("http://172.20.10.5:4000/nearby?lat=$lat&lng=$lon&SearchQuery=$categoryQuery");
+    final url = Uri.parse("http://192.168.29.17:4000/nearby?lat=$lat&lng=$lon&SearchQuery=$categoryQuery");
 
     try {
       final response = await http.get(url);
@@ -463,7 +464,7 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
                 final lonStr = lng.toString();
 
                 final introUrl = Uri.parse(
-                    "http://172.20.10.5:4000/spotintro?username=$username&lat=$latStr&lon=$lonStr"
+                    "http://192.168.29.17:4000/spotintro?username=$username&lat=$latStr&lon=$lonStr"
                 );
 
                 final introResponse = await http.get(introUrl);
@@ -851,7 +852,12 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
               context,
               MaterialPageRoute(builder: (context) => UserProfileScreen(username: widget.username)),
             );
-          } else {
+          }else if (index == 3) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => JourneyScreen(username: widget.username)),
+            );
+          }else {
             setState(() {
               _selectedIndex = index;
             });
