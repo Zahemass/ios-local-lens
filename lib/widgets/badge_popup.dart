@@ -21,7 +21,7 @@ class BadgePopup extends StatelessWidget {
         : 'You got $score points\nso you earned STREET FACER BADGE!';
     final badgeIcon = isLocalGuru
         ? 'assets/images/LocalGuru.png'
-        : 'assets/images/post_points.png';
+        : 'assets/images/points_icon.png';
 
     return Stack(
       children: [

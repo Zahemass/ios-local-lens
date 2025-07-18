@@ -46,6 +46,22 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
   String _normalize(String text) {
     return text.toLowerCase().replaceAll(RegExp(r'[^a-z0-9 ]'), '').replaceAll('&', 'and').trim();
   }
+  Future<void> _setupKiraVoice() async {
+    await _flutterTts.setLanguage("en-US");
+    await _flutterTts.setPitch(1.2);
+    await _flutterTts.setSpeechRate(0.42);
+    await _flutterTts.setVolume(1.0);
+
+    List<dynamic> voices = await _flutterTts.getVoices;
+    for (var voice in voices) {
+      final name = voice['name']?.toString().toLowerCase() ?? '';
+      if (name.contains('female') || name.contains('en-us-x') || name.contains('en-us') && name.contains('f')) {
+        await _flutterTts.setVoice(voice);
+        print('🎙️ Kira voice set to: ${voice['name']}');
+        break;
+      }
+    }
+  }
 
 
   @override
@@ -53,7 +69,7 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
     super.initState();
     _initLocation();
     _speech = stt.SpeechToText();
-
+    _setupKiraVoice();
   }
 
   Future<void> _requestMicPermission() async {
