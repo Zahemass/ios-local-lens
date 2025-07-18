@@ -858,26 +858,35 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
       bottomNavigationBar: CustomBottomNav(
         currentIndex: _selectedIndex,
         onTap: (index) {
+          Widget nextPage;
           if (index == 1) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => UploadScreen(username: widget.username)),
-            );
-          }else if (index == 2) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => UserProfileScreen(username: widget.username)),
-            );
-          }else if (index == 3) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => JourneyScreen(username: widget.username)),
-            );
-          }else {
+            nextPage = UploadScreen(username: widget.username);
+          } else if (index == 2) {
+            nextPage = UserProfileScreen(username: widget.username);
+          } else if (index == 3) {
+            nextPage = JourneyScreen(username: widget.username);
+          } else {
             setState(() {
               _selectedIndex = index;
             });
+            return;
           }
+
+          Navigator.pushReplacement(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) => nextPage,
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                const begin = Offset(1.0, 0.0); // Right to Left
+                const end = Offset.zero;
+                final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.ease));
+                final offsetAnimation = animation.drive(tween);
+
+                return SlideTransition(position: offsetAnimation, child: child);
+              },
+              transitionDuration: Duration(milliseconds: 400),
+            ),
+          );
         },
       ),
 

@@ -357,6 +357,7 @@ class _UploadScreenState extends State<UploadScreen> {
     final emoji = categoryEmojis[selectedCategory] ?? "🏷️";
 
     return Scaffold(
+
       extendBody: true,
       backgroundColor: const Color(0xFFFFE4EC),
       body: Stack(
@@ -370,14 +371,15 @@ class _UploadScreenState extends State<UploadScreen> {
           ),
           Positioned.fill(
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10), // adjust for strength
+              filter: ImageFilter.blur(sigmaX: 9, sigmaY: 9), // adjust for strength
               child: Container(
-                color: Colors.white.withOpacity(0.1), // frosted overlay
+                color: Colors.white.withOpacity(0.3), // frosted overlay
               ),
             ),
           ),
+
           SingleChildScrollView(
-            padding: const EdgeInsets.only(top: 120, bottom: 100),
+            padding: const EdgeInsets.only(top: 150, bottom: 150),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
