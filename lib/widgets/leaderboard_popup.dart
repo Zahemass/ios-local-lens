@@ -42,7 +42,7 @@ class _DynamicLeaderboardPopupState extends State<DynamicLeaderboardPopup> {
   Future<String?> _fetchProfileImage(String username) async {
     try {
       final response = await http.post(
-        Uri.parse("http://192.168.29.68:4000/return-profile"), // Replace with your API base URL
+        Uri.parse("http://192.168.29.17:4000/return-profile"), // Replace with your API base URL
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"username": username}),
       );
